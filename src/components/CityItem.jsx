@@ -19,7 +19,6 @@ function CityItem({ city }) {
   const handleClick = async (e) => {
     e.preventDefault();
     await deleteCity(id);
-    console.log("tesint");
   };
 
   return (

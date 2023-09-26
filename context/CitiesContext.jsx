@@ -1,26 +1,69 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useReducer } from "react";
 import PropTypes from "prop-types";
 
 const CitiesContext = createContext();
 
-const CitiesProvider = ({ children }) => {
-  const BASE_URL = "http://localhost:8000";
+const BASE_URL = "http://localhost:8000";
 
-  const [cities, setCities] = useState();
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentCity, setCurrentCity] = useState({});
+const initialState = {
+  cities: [],
+  isLoading: false,
+  currentCity: {},
+  error: "",
+};
+
+const reducer = (state, action) => {
+  switch (action.type) {
+    case "loading":
+      return { ...state, isLoading: true };
+    case "cities/loaded":
+      return {
+        ...state,
+        isLoading: false,
+        cities: action.payload,
+      };
+    case "currentCity/loaded":
+      return {
+        ...state,
+        isLoading: false,
+        currentCity: action.payload,
+      };
+
+    case "cities/created":
+      return { ...state, cities: [...state.cities, action.payload] };
+
+    case "cities/deleted":
+      return {
+        ...state,
+        isLoading: false,
+        cities: state.cities.filter((city) => city.id !== action.payload),
+      };
+    case "rejected":
+      return { ...state, isLoading: false, error: action.payload };
+
+    default:
+      break;
+  }
+};
+
+const CitiesProvider = ({ children }) => {
+  const [{ cities, isLoading, currentCity }, dispatch] = useReducer(
+    reducer,
+    initialState
+  );
 
   useEffect(() => {
     async function fetchCities() {
       try {
-        setIsLoading(true);
+        dispatch({ type: "loading" });
         const response = await fetch(`${BASE_URL}/cities`);
         const data = await response.json();
-        setCities(data);
+        dispatch({ type: "cities/loaded", payload: data });
       } catch {
-        console.log("there is an error");
-      } finally {
-        setIsLoading(false);
+        dispatch({
+          type: "rejected",
+          payload: "There is an error while fetching the data",
+        });
       }
     }
 
@@ -29,20 +72,20 @@ const CitiesProvider = ({ children }) => {
 
   async function getCity(id) {
     try {
-      setIsLoading(true);
+      dispatch({ type: "loading" });
       const response = await fetch(`${BASE_URL}/cities/${id}`);
       const data = await response.json();
-      setCurrentCity(data);
+      dispatch({ type: "currentCity/loaded", payload: data });
     } catch {
-      console.log("there is an error");
-    } finally {
-      setIsLoading(false);
+      dispatch({
+        type: "rejected",
+        payload: "There is an error while fetching the data",
+      });
     }
   }
 
   async function createCity(newCity) {
     try {
-      setIsLoading(true);
       const response = await fetch(`${BASE_URL}/cities`, {
         method: "POST",
         body: JSON.stringify(newCity),
@@ -51,28 +94,25 @@ const CitiesProvider = ({ children }) => {
         },
       });
       const data = await response.json();
-      setCities((cities) => [...cities, data]);
-      console.log(data);
+      dispatch({ type: "cities/created", payload: data });
     } catch {
-      console.log("there is an error");
-    } finally {
-      setIsLoading(false);
+      dispatch({
+        type: "rejected",
+        payload: "There is an error fetching the data",
+      });
     }
   }
 
   async function deleteCity(id) {
     try {
-      setIsLoading(true);
+      dispatch({ type: "loading" });
       const response = await fetch(`${BASE_URL}/cities/${id}`, {
         method: "DELETE",
       });
-      const data = await response.json();
-      setCities((cities) => cities.filter((city) => city.id !== id));
-      console.log(data);
+      await response.json();
+      dispatch({ type: "cities/deleted", payload: id });
     } catch {
-      console.log("there is an error deleting city");
-    } finally {
-      setIsLoading(false);
+      dispatch({ type: "rejected" });
     }
   }
   return (

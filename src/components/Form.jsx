@@ -1,10 +1,13 @@
-// "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=0&longitude=0"
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { useUrlPosition } from "../hooks/useUrlPosition";
 import Button from "./Button";
 
 import styles from "./Form.module.css";
+import Message from "./Message";
+import { useCities } from "../../context/CitiesContext";
 
 export function convertToEmoji(countryCode) {
   const codePoints = countryCode
@@ -14,16 +17,52 @@ export function convertToEmoji(countryCode) {
   return String.fromCodePoint(...codePoints);
 }
 
+const BASE_URL = "https://api.bigdatacloud.net/data/reverse-geocode-client";
+
 function Form() {
+  const [lat, lng] = useUrlPosition();
+
   const [cityName, setCityName] = useState("");
-  // const [country, setCountry] = useState("");
   const [date, setDate] = useState(new Date());
   const [notes, setNotes] = useState("");
+  const [isLoadingGeocoding, setIsLoadingGeocoding] = useState(false);
+  const { createCity } = useCities();
+  console.log({ isLoadingGeocoding });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!cityName || !date) return;
+    const newCity = { notes, date, cityName, position: { lat, lng } };
+    await createCity(newCity);
+    navigate("/app/cities");
+    console.log(newCity);
+  };
+
+  useEffect(() => {
+    if (!lat && !lng) return;
+    async function fetchCityData() {
+      try {
+        setIsLoadingGeocoding(true);
+        const response = await fetch(
+          `${BASE_URL}?latitude=${lat}&longitude=${lng}`
+        );
+        const data = await response.json();
+        setCityName(data.cityName || data.locality);
+      } catch (err) {
+        console.log(err);
+      } finally {
+        setIsLoadingGeocoding(false);
+      }
+    }
+    fetchCityData();
+  }, [lat, lng]);
 
   const navigate = useNavigate();
 
+  if (!lat && !lng) return <Message message="Start by clicking on the map" />;
+
   return (
-    <form className={styles.form}>
+    <form onSubmit={handleSubmit} className={styles.form}>
       <div className={styles.row}>
         <label htmlFor="cityName">City name</label>
         <input
@@ -36,10 +75,11 @@ function Form() {
 
       <div className={styles.row}>
         <label htmlFor="date">When did you go to {cityName}?</label>
-        <input
+        <DatePicker
           id="date"
-          onChange={(e) => setDate(e.target.value)}
-          value={date}
+          onChange={(date) => setDate(date)}
+          selected={date}
+          dateFormat="dd/MM/yyyy"
         />
       </div>
 

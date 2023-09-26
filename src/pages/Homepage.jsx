@@ -1,8 +1,10 @@
+import { useNavigate } from "react-router";
 import Button from "../components/Button";
 import PageNav from "../components/PageNav";
 import styles from "./Homepage.module.css";
 
 export default function Homepage() {
+  const navigate = useNavigate();
   return (
     <main className={styles.homepage}>
       <PageNav />
@@ -17,7 +19,7 @@ export default function Homepage() {
           of. Never forget your wonderful experiences, and show your friends how
           you have wandered the world.
         </h2>
-        <Button onClick={() => {}} type="primary">
+        <Button onClick={() => navigate("/app")} type="primary">
           Start Tracking Now
         </Button>
       </section>

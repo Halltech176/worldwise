@@ -30,7 +30,12 @@ const reducer = (state, action) => {
       };
 
     case "cities/created":
-      return { ...state, cities: [...state.cities, action.payload] };
+      return {
+        ...state,
+        isLoading: false,
+        currentCity: action.payload,
+        cities: [...state.cities, action.payload],
+      };
 
     case "cities/deleted":
       return {
